@@ -1,0 +1,264 @@
+1. Sqlyog nova baza podataka pravis tabele svaka tabela ima primarni kljuc i jedna ima spoljni kljuc, Auto Incr
+2. Konektor sa neta, sql connector, jar file
+3. Otoris netbeans napravis ant projekat i odmah dodas konektor
+4. Napravim paket domen i za svaku tabelu u sqlyogu napravim klasu u tom paketu, od tih klasa poslednju pravim onu koja ima spoljni kljuc(get, set, konstruktori), (VODI RACUNA DA SPOLJNI KLJUC NIJE NI INT NI STRING, NEGO U OVOM SLUCAJU ZVANJE), napravim atribute u klasama i napravim parametarski i neparametarski konstruktor i getere i setere
+5. Napravi paket forme: glavna, dodaj nastavnika, prikazi nastavnike i popuni sve forme komponentama
+6. Napravi u paketu broker, DBBroker, a u paketu kontroler napravi Kontroler
+7. Odmah u kontroleru napisi ovo:
+DBBroker dbbroker;
+
+    public Kontroler() {
+        dbbroker = new DBBroker();
+    }
+8. Povezi da iz glavne forme preko onog dugmeta mozes da udjes u ove druge 2 forme i stavi u glavnoj formi setLocationRelativeTo(null);
+9. Dodajes u formi DodajNastavnika u konstruktoru fju popuniCombo(); i onda kada je izgenerise je pravis dole
+10. Popunjavamo fju popuniCombo(): 
+         cmbZvanja.removeAllItems();
+         List<Zvanje> zvanja = new Kontroler().vratiSvaZvanja();
+//vodi racuna da bude utilList, morace try catch,jer je fja iz dbbrokera(posle)
+9. i to pravi vratiSvaZnanja() u kontroleru
+10. U vratiSvaZnanja() u kontroleru pises ovo: return DBBroker.vratiZvanja();
+11. i onda pravis vratiSvaZvanja u DBBrokeru
+12. odmah u DBbrokeru napises gore import java.sql.*;
+13. i onda pises u vratiZvanja: 
+Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/studentska_sluzba", "root", ""); //odmah throws Exception koji ti preporucuje
+        System.out.println("Otvorena konekcija");
+        String query = "SELECT * FROM zvanje";
+        Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery(query);
+        
+        List<Zvanje> zvanja = new ArrayList<>();
+        while (rs.next()) {            
+            Zvanje zvanje = new Zvanje();
+            zvanje.setId(rs.getLong("id"));
+            zvanje.setNaziv(rs.getString("naziv"));
+            zvanja.add(zvanje);
+        }
+  
+        rs.close();
+        st.close();
+        connection.close();
+        System.out.println("Zatvorena konekcija");
+        return zvanja;
+14. vratis se u kontroler i tamo dodas try catch i u catchu napises:            ex.printStackTrace();
+            throw new Exception("Greska pri vracanju zvanja");//bolje runtime
+15. onda se vracamo u formu DodajNastavnika u popuniCombo i odmah dodajemo try catch kao sto nam nudi na 2. mestu
+16. i onda u tryu pise sledece:
+ cmbZvanja.removeAllItems();
+            List<Zvanje> zvanja = new Kontroler().vratiSvaZvanja();
+            cmbZvanja.addItem("");//ovo je da ne bude cekirano prvo polje
+            for (Zvanje zvanje : zvanja) {
+                cmbZvanja.addItem(zvanje.getNaziv());
+            }//inace ako je samo zvanje onda moras za cmb da promenis u object
+             //svakako ces menjati u object bez obzira na sve
+             //i ono da redefinises metodu toString u zvanje
+17. sada ulazimo u formu DodajNastavnika i u dugme sacuvaj i tamo pisemo:
+String greska = validacija();
+        if (!greska.isEmpty()) {
+            JOptionPane.showMessageDialog(rootPane, greska);
+            return;
+        }
+try{       
+String ime = txtIme.getText();
+       String prezime = txtPrezime.getText();
+       Zvanje zvanje = (Zvanje) cmbZvanja.getSelectedItem();
+//ovde ces kastovati kao sto ti i preporucuje
+Nastavnik nastavnik = new Nastavnik( 0, ime, prezime, zvanje);
+       
+       boolean uspesno = new Kontroler().sacuvajNastavnika(nastavnik);
+            if (uspesno) {
+                JOptionPane.showMessageDialog(rootPane, "Sacuvan je nastavnik sa imenom " + txtIme.getText());
+                int opcija = JOptionPane.showConfirmDialog(rootPane, "Oces jos", ime, JOptionPane.YES_NO_OPTION);
+
+                if (opcija == JOptionPane.YES_OPTION) {
+                    DodajNastavnika dialog = new DodajNastavnika(null, true);
+                    DodajNastavnika dd = new DodajNastavnika(null, true);
+                    //jako bitno da je u zagradi null
+                    dialog.setVisible(true);
+
+                    dispose();
+
+                } else {
+                    dispose();
+
+                }
+            } else {
+                JOptionPane.showMessageDialog(rootPane, "Neuspesno cuvanje");
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+//taj try catch blok se ispisuje tek sada se napise sve u 
+//kontroleru i brokeru, jer tada crveni  nastavnik
+18. sledece pisemo u validaciji koja se izgenerisala u DodajNastavnika:
+ private String validacija() {
+        int izbor = cmbZvanja.getSelectedIndex();
+        if (izbor == 0)  return "Nije odabran combo";
+        //ime je ime, prezime je jmbg
+        //ime validacija
+        String ime = txtIme.getText();
+        if (ime.length()<2 || ime.length()>30) {
+            return "Previse duzacak ili previse kratak naziv";
+        }
+        
+        for (int i = 0; i < ime.length(); i++) {
+            Character c = ime.charAt(i);
+            if (!Character.isAlphabetic(c)){
+                
+                return "Ime nije samo od slova";
+            }
+        }
+        
+        //jmbg validacija
+        String prezime = txtPrezime.getText();
+        if (prezime.length()!=13) {
+            return "Prezime mora da ima tacno 13 karaktera";
+        }
+        
+//        for (int i = 0; i < prezime.length(); i++) {
+//            Character c = prezime.charAt(i);
+//            if (!Character.isDigit(c)){
+//                return "Ovo je slucaj da prezime mora da ima smo brojeve";
+//            }
+//        }
+//        
+        return "";
+    }
+
+20.  sada ulazimo u sacuvajNastavnika u kontroleru i tu pisemo:
+ return DBBroker.sacuvajNastavnika(nastavnik); //obavezno (nastavnik)
+i bacamo throws SQLException
+19. sada ulazimo u DBBroker u sacuvajNastavnika i pisemo:
+ public static boolean sacuvajNastavnika(Nastavnik nastavnik) throws SQLException {
+        Connection connection = null;
+        try {
+
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/studentska_sluzba", "root", "");
+            System.out.println("Otvorena konekcija");
+
+            String query = "INSERT INTO nastavnik (ime, prezime, zvanje_id) VALUES (?,?,?)";
+            //ovde ne stavljas id, jer kada uneses novog nastavnika onda ce id sam da se generise(poveca)
+            PreparedStatement ps = connection.prepareStatement(query)
+            ps.setString(1, nastavnik.getIme());
+            ps.setString(2, nastavnik.getPrezime());
+            ps.setLong(3, nastavnik.getZvanje().getId());
+
+            ps.executeUpdate();
+            ps.close();
+        } catch (SQLException ex) {
+            return false;
+
+        } finally {
+            if (connection != null || !connection.isClosed()) {
+                connection.close();
+                System.out.println("Zatvorena konekcija");
+            }
+        }
+        return true;
+
+    }
+20. sada popunjavamo tabelu, prvo u toj formi gde je tabela pre konstruktora napisemo: 
+DefaultTableModel model = new DefaultTableModel();//treba za prepare
+DBBroker dbbroker = new DBBroker();//treba da popuniTabelu
+List<Nastavnik> nastavnici;
+//treba mi lista nastavnici i za dugme detalji i za popuniTabelu
+21. u formi gde je tabela idem ispod initComponents(); i tu stavljam prepare(); i onda idem ispod gde se ta fja napravi i pisem:
+ model.setColumnCount(0);
+        model.setRowCount(0);
+        
+        model.addColumn("ime");
+        model.addColumn("prezime");
+        model.addColumn("zvanje");
+         
+        table.setModel(model);
+22. onda u konstruktoru ispod prepare(); napisem popuniTabelu(); i tamo gde se napravi ta fja pisem sledece:
+private void popuniTabelu() throws SQLException{
+       nastavnici = new Kontroler().vratiSveNastavnike();
+        
+        //sada ja od liste nastavnika moram da napravim niz objekata
+        for (Nastavnik n : nastavnici) {
+            Object[] o = getNiz(n);
+
+            model.addRow(o);
+        }
+    }
+23. i sada treba da se napravi getNiz(n);, to ovako:
+ private Object[] getNiz(Nastavnik n) {
+        Object[] o = {n.getIme(), n.getPrezime(), n.getZvanje().getNaziv()};
+        return o;
+    }
+24. i onda u kontroleru u fji vratiSveNastavnike pise:
+try {
+            return dbbroker.vratiSveNastavnike();
+        } catch (SQLException ex) {
+            throw new RuntimeException("Greska pri vrcanju nastavnika");
+        }
+25. i onda u dbbrokeru u fji vratiSveNastavnike pise sledece:
+try{
+        Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/studentska_sluzba", "root", "");
+        String query = "SELECT * FROM nastavnik ORDER BY prezime DESC";
+        Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery(query);
+        
+        List<Nastavnik> vratiNastavnike = new ArrayList<>();
+        while (rs.next()) {            
+            Nastavnik nastavnik = new Nastavnik();
+            nastavnik.setId(rs.getLong("id"));
+            nastavnik.setIme(rs.getString("ime"));
+            nastavnik.setPrezime(rs.getString("prezime"));
+            
+            long zvanjeId = rs.getLong("zvanje_id");
+            List<Zvanje> zvanja = vratiZvanja();
+            //u listi zvanja se nalaze sva zvanja
+            Zvanje zvanje = null;
+            
+            for (Zvanje z : zvanja){//sada prolazimo kroz sve elemente liste zvanja
+                if (z.getId() == zvanjeId){
+                    zvanje = z;
+                    break;
+                }
+            }
+
+            nastavnik.setZvanje(zvanje);
+            vratiNastavnike.add(nastavnik);
+        }
+        rs.close();
+        st.close();
+        connection.close();
+        
+        return vratiNastavnike;    
+        
+        } catch (RuntimeException e){
+        throw new RuntimeException("Greska pri vrcanju nastavnika");
+        }
+26. vratis se u konstruktor i tamo stavis try catch posle super();
+27. e sada radimo da kada sam u formi PrikazNastavnika i kliknem dugme detalji da se pojavi ista forma kao za DodajNastavnika samo da ne mogu da menjam nista u textBoxu ... Za to mi treba novi konstruktro
+28. U formi DodajNastavnika pravim novi konstruktor ispod prvog i pisem sledece:
+public DodajNastavnika(java.awt.Frame parent, boolean modal, Nastavnik nastavnik) {//ovde sam samo dodao Nastavnik nastavnik
+
+        super(parent, modal);
+        initComponents();
+
+        cmbZvanja.removeAllItems();
+        cmbZvanja.addItem(nastavnik.getZvanje().getNaziv());
+        cmbZvanja.setEnabled(false);
+
+        txtIme.setText(nastavnik.getIme());
+        txtIme.setEditable(false);
+
+        txtPrezime.setText(nastavnik.getPrezime());
+        txtPrezime.setEditable(false);
+
+        btnSacuvaj.setVisible(false);
+
+    }
+29. sada idem u dugme detalji u formiPrikazNastavnika i tamo pisem:
+ int izbor = table.getSelectedRow();
+            
+            if (izbor == -1) return;
+         
+            Nastavnik nastavnik = nastavnici.get(izbor);
+            
+            new DodajNastavnika(null, rootPaneCheckingEnabled, nastavnik).setVisible(true);
+
+
